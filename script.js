@@ -65,32 +65,41 @@ class AudioSteganography {
                     this.log('step1Logs', `Audio requires ${requiredPixels} pixels for safe storage`, 'info');
                 }
                 
-                // Calculate initial scale for display
-                const maxWidth = 400;
-                const maxHeight = 300;
-                let scale = Math.min(maxWidth / img.width, maxHeight / img.height);
-                
-                let finalWidth = Math.floor(img.width * scale);
-                let finalHeight = Math.floor(img.height * scale);
+                // Start with original image dimensions
+                let finalWidth = img.width;
+                let finalHeight = img.height;
                 let totalPixels = finalWidth * finalHeight;
                 
-                // If we need more pixels, scale up the image
+                // If we need more pixels, scale up the image significantly
                 if (requiredPixels > 0 && totalPixels < requiredPixels) {
-                    const scaleFactor = Math.sqrt(requiredPixels / totalPixels);
-                    finalWidth = Math.floor(img.width * scale * scaleFactor);
-                    finalHeight = Math.floor(img.height * scale * scaleFactor);
+                    const scaleFactor = Math.sqrt(requiredPixels / totalPixels) * 1.5; // Add 50% extra buffer
+                    finalWidth = Math.floor(img.width * scaleFactor);
+                    finalHeight = Math.floor(img.height * scaleFactor);
                     totalPixels = finalWidth * finalHeight;
                     
-                    this.log('step1Logs', `Scaling image up by ${scaleFactor.toFixed(2)}x to accommodate audio data`, 'info');
+                    this.log('step1Logs', `Auto-scaling image up by ${scaleFactor.toFixed(2)}x to accommodate audio data`, 'info');
+                    this.log('step1Logs', `New dimensions: ${finalWidth}x${finalHeight} (${totalPixels} pixels)`, 'info');
                 }
+                
+                // Apply display scaling if the image is too large for the canvas container
+                const maxDisplayWidth = 800;
+                const maxDisplayHeight = 600;
+                let displayScale = Math.min(maxDisplayWidth / finalWidth, maxDisplayHeight / finalHeight, 1);
                 
                 canvas.width = finalWidth;
                 canvas.height = finalHeight;
+                canvas.style.width = Math.floor(finalWidth * displayScale) + 'px';
+                canvas.style.height = Math.floor(finalHeight * displayScale) + 'px';
                 
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 this.originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 
                 this.log('step1Logs', `Image loaded: ${canvas.width}x${canvas.height} pixels (${this.originalImageData.data.length / 4} total pixels)`, 'success');
+                
+                if (requiredPixels > 0) {
+                    this.log('step1Logs', `Pixel capacity: ${totalPixels} available vs ${requiredPixels} required (${((totalPixels - requiredPixels) / requiredPixels * 100).toFixed(1)}% extra)`, 'success');
+                }
+                
                 this.checkReadyToHide();
                 resolve();
             };
