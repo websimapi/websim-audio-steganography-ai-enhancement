@@ -249,39 +249,42 @@ class AudioSteganography {
             this.originalImageData.height
         );
         
-        console.log('DEBUG: Original image data length:', this.originalImageData.data.length);
-        console.log('DEBUG: Stego image data length:', this.stegoImageData.data.length);
-        console.log('DEBUG: Audio bits length:', this.audioBits.length);
-        
         // Hide audio bits in least common pixels - but use sequential pixel order for consistency
         this.usedPixels.clear();
         this.pixelOrder = []; // Track exact order of pixels used
         
         let bitIndex = 0;
         let pixelsUsed = 0;
+        let pixelsModified = 0;
         
         // Use pixels in sequential order instead of frequency order for better extraction
         for (let pixelIndex = 0; pixelIndex < this.stegoImageData.width * this.stegoImageData.height && bitIndex < this.audioBits.length; pixelIndex++) {
             const dataIndex = pixelIndex * 4;
             
-            // Hide 3 bits per pixel in RGB channels (LSB)
+            // Store original values to check for actual changes
+            const originalR = this.stegoImageData.data[dataIndex];
+            const originalG = this.stegoImageData.data[dataIndex + 1];
+            const originalB = this.stegoImageData.data[dataIndex + 2];
+            
+            // Hide 3 bits per pixel in RGB channels (LSB) - skip alpha channel
             if (bitIndex < this.audioBits.length) {
-                const originalR = this.stegoImageData.data[dataIndex];
                 this.stegoImageData.data[dataIndex] = (this.stegoImageData.data[dataIndex] & 0xFE) | parseInt(this.audioBits[bitIndex]);
-                console.log(`DEBUG: Pixel ${pixelIndex} R: ${originalR} -> ${this.stegoImageData.data[dataIndex]} (bit ${this.audioBits[bitIndex]})`);
                 bitIndex++;
             }
             if (bitIndex < this.audioBits.length) {
-                const originalG = this.stegoImageData.data[dataIndex + 1];
                 this.stegoImageData.data[dataIndex + 1] = (this.stegoImageData.data[dataIndex + 1] & 0xFE) | parseInt(this.audioBits[bitIndex]);
-                console.log(`DEBUG: Pixel ${pixelIndex} G: ${originalG} -> ${this.stegoImageData.data[dataIndex + 1]} (bit ${this.audioBits[bitIndex]})`);
                 bitIndex++;
             }
             if (bitIndex < this.audioBits.length) {
-                const originalB = this.stegoImageData.data[dataIndex + 2];
                 this.stegoImageData.data[dataIndex + 2] = (this.stegoImageData.data[dataIndex + 2] & 0xFE) | parseInt(this.audioBits[bitIndex]);
-                console.log(`DEBUG: Pixel ${pixelIndex} B: ${originalB} -> ${this.stegoImageData.data[dataIndex + 2]} (bit ${this.audioBits[bitIndex]})`);
                 bitIndex++;
+            }
+            
+            // Check if pixel was actually modified
+            if (originalR !== this.stegoImageData.data[dataIndex] || 
+                originalG !== this.stegoImageData.data[dataIndex + 1] || 
+                originalB !== this.stegoImageData.data[dataIndex + 2]) {
+                pixelsModified++;
             }
             
             this.usedPixels.add(pixelIndex);
@@ -309,23 +312,29 @@ class AudioSteganography {
         
         const stegoCtx = stegoCanvas.getContext('2d');
         
-        // Force canvas to update by clearing first
+        // Force canvas refresh with proper image smoothing settings
+        stegoCtx.imageSmoothingEnabled = false;
         stegoCtx.clearRect(0, 0, stegoCanvas.width, stegoCanvas.height);
         
-        // Put the modified image data
+        // Put the modified image data directly
         stegoCtx.putImageData(this.stegoImageData, 0, 0);
         
-        console.log('DEBUG: Steganographic canvas updated');
-        console.log('DEBUG: Canvas dimensions:', stegoCanvas.width, 'x', stegoCanvas.height);
+        this.log('step2Logs', `Steganographic image rendered: ${stegoCanvas.width}x${stegoCanvas.height}`, 'success');
         
-        // Verify the canvas actually shows the modified data
-        const canvasImageData = stegoCtx.getImageData(0, 0, stegoCanvas.width, stegoCanvas.height);
-        console.log('DEBUG: Canvas data verification - first pixel RGBA:', 
-                   canvasImageData.data[0], canvasImageData.data[1], canvasImageData.data[2], canvasImageData.data[3]);
-        console.log('DEBUG: Stego data verification - first pixel RGBA:', 
-                   this.stegoImageData.data[0], this.stegoImageData.data[1], this.stegoImageData.data[2], this.stegoImageData.data[3]);
+        // Verify changes by comparing a few pixels
+        const originalCanvas = document.getElementById('originalCanvas');
+        const originalCtx = originalCanvas.getContext('2d');
+        const originalCheck = originalCtx.getImageData(0, 0, 10, 1);
+        const stegoCheck = stegoCtx.getImageData(0, 0, 10, 1);
         
-        this.log('step2Logs', `Steganographic image displayed on canvas: ${stegoCanvas.width}x${stegoCanvas.height}`, 'info');
+        let differences = 0;
+        for (let i = 0; i < 30; i++) { // Check first 10 pixels RGB only
+            if (originalCheck.data[i] !== stegoCheck.data[i]) {
+                differences++;
+            }
+        }
+        
+        this.log('step2Logs', `Visual verification: ${differences} pixel channel differences detected in first 10 pixels`, differences > 0 ? 'success' : 'warning');
         
         // Create and display pixel usage map
         this.createPixelUsageMap();
@@ -333,6 +342,7 @@ class AudioSteganography {
         const stats = {
             'Audio Bits': this.audioBits.length.toLocaleString(),
             'Pixels Used': pixelsUsed.toLocaleString(),
+            'Pixels Modified': pixelsModified.toLocaleString(),
             'Total Pixels': (this.stegoImageData.width * this.stegoImageData.height).toLocaleString(),
             'Usage %': ((pixelsUsed / (this.stegoImageData.width * this.stegoImageData.height)) * 100).toFixed(2) + '%',
             'Bits per Pixel': (this.audioBits.length / pixelsUsed).toFixed(2)
@@ -498,10 +508,6 @@ Please enhance only the non-audio pixels to create an artistic version while pre
             this.enhancedImageData = this.stegoImageData;
         }
         
-        console.log('DEBUG: Extracting from image with dimensions:', this.enhancedImageData.width, 'x', this.enhancedImageData.height);
-        console.log('DEBUG: Expected audio bits length:', this.audioBits.length);
-        console.log('DEBUG: Pixels used during hiding:', this.pixelOrder ? this.pixelOrder.length : this.usedPixels.size);
-        
         // Extract bits using the same sequential order as hiding
         let extractedBits = '';
         const totalPixels = this.enhancedImageData.width * this.enhancedImageData.height;
@@ -510,7 +516,7 @@ Please enhance only the non-audio pixels to create an artistic version while pre
         for (let pixelIndex = 0; pixelIndex < totalPixels && extractedBits.length < bitsNeeded; pixelIndex++) {
             const dataIndex = pixelIndex * 4;
             
-            // Extract 3 bits per pixel from RGB channels (LSB)
+            // Extract 3 bits per pixel from RGB channels (LSB) - skip alpha
             const rBit = (this.enhancedImageData.data[dataIndex] & 1).toString();
             const gBit = (this.enhancedImageData.data[dataIndex + 1] & 1).toString();
             const bBit = (this.enhancedImageData.data[dataIndex + 2] & 1).toString();
@@ -518,17 +524,10 @@ Please enhance only the non-audio pixels to create an artistic version while pre
             extractedBits += rBit;
             if (extractedBits.length < bitsNeeded) extractedBits += gBit;
             if (extractedBits.length < bitsNeeded) extractedBits += bBit;
-            
-            if (pixelIndex < 5) {
-                console.log(`DEBUG: Extract pixel ${pixelIndex}: RGB(${this.enhancedImageData.data[dataIndex]}, ${this.enhancedImageData.data[dataIndex + 1]}, ${this.enhancedImageData.data[dataIndex + 2]}) -> bits(${rBit}, ${gBit}, ${bBit})`);
-            }
         }
         
         // Trim to exact original length
         extractedBits = extractedBits.substring(0, this.audioBits.length);
-        
-        console.log('DEBUG: First 10 extracted bits:', extractedBits.substring(0, 10));
-        console.log('DEBUG: First 10 original bits:', this.audioBits.substring(0, 10));
         
         this.log('step4Logs', `Extracted ${extractedBits.length} bits from enhanced image`, 'info');
         
@@ -541,8 +540,6 @@ Please enhance only the non-audio pixels to create an artistic version while pre
         }
         
         const accuracy = (matchingBits / this.audioBits.length) * 100;
-        
-        console.log('DEBUG: Matching bits:', matchingBits, '/', this.audioBits.length, '=', accuracy.toFixed(2) + '%');
         
         // Try to reconstruct audio
         try {
@@ -568,22 +565,15 @@ Please enhance only the non-audio pixels to create an artistic version while pre
             
         } catch (error) {
             this.log('step4Logs', `Audio reconstruction failed: ${error.message}`, 'error');
-            console.error('DEBUG: Reconstruction error details:', error);
         }
     }
     
     async reconstructAudioFromBits(bits) {
         this.log('step4Logs', 'Reconstructing audio from extracted bits...', 'info');
         
-        console.log('DEBUG: Reconstructing from', bits.length, 'bits');
-        console.log('DEBUG: First 100 bits:', bits.substring(0, 100));
-        
         // Extract header length (first 32 bits)
         const headerLengthBits = bits.substring(0, 32);
         const headerLength = parseInt(headerLengthBits, 2);
-        
-        console.log('DEBUG: Header length bits:', headerLengthBits);
-        console.log('DEBUG: Header length:', headerLength);
         
         // Validate header length
         if (headerLength > bits.length || headerLength < 0 || headerLength > 10000) {
@@ -594,23 +584,15 @@ Please enhance only the non-audio pixels to create an artistic version while pre
         
         // Extract header
         const headerBinary = bits.substring(32, 32 + headerLength);
-        console.log('DEBUG: Header binary length:', headerBinary.length);
-        console.log('DEBUG: Header binary first 100 chars:', headerBinary.substring(0, 100));
         
         try {
             const headerString = this.binaryToString(headerBinary);
-            console.log('DEBUG: Header string:', headerString);
-            
             const header = JSON.parse(headerString);
-            console.log('DEBUG: Parsed header:', header);
             
             this.log('step4Logs', `Header: ${JSON.stringify(header)}`, 'info');
             
             // Extract audio data
             const audioBinary = bits.substring(32 + headerLength);
-            console.log('DEBUG: Audio binary length:', audioBinary.length);
-            console.log('DEBUG: Expected samples:', header.length);
-            
             const samples = new Int16Array(header.length);
             
             for (let i = 0; i < header.length; i++) {
@@ -646,8 +628,6 @@ Please enhance only the non-audio pixels to create an artistic version while pre
             return audioBuffer;
             
         } catch (parseError) {
-            console.error('DEBUG: JSON parse error:', parseError);
-            console.error('DEBUG: Header string attempt:', this.binaryToString(headerBinary).substring(0, 100));
             throw new Error(`Header parsing failed: ${parseError.message}. Data may be corrupted.`);
         }
     }
