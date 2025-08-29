@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -188,6 +187,7 @@
             <h2><span class="step-number">2</span>Analyze & Hide Audio Data</h2>
             <div class="controls">
                 <button id="hideAudioBtn" disabled>Hide Audio in Image</button>
+                <button id="downloadStegoBtn" disabled>Download Stego Image</button>
             </div>
             <div class="stats" id="hideStats"></div>
             <div class="canvas-container">
@@ -228,10 +228,26 @@
             <div class="stats" id="verifyStats"></div>
             <div class="log-container" id="step4Logs"></div>
         </div>
+
+        <div class="step">
+            <h2><span class="step-number">5</span>Test Downloaded Image</h2>
+            <div class="controls">
+                <input type="file" id="testImageInput" accept="image/*" />
+                <button id="testExtractBtn" disabled>Extract Audio from Uploaded Image</button>
+                <button id="playTestAudioBtn" disabled>Play Test Audio</button>
+            </div>
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <h3>Test Image</h3>
+                    <canvas id="testCanvas" width="400" height="300"></canvas>
+                </div>
+            </div>
+            <div class="stats" id="testStats"></div>
+            <div class="log-container" id="step5Logs"></div>
+        </div>
     </div>
 
     <script src="script.js"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
