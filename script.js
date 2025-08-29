@@ -179,15 +179,58 @@ class AudioSteganography {
         if (ready) {
             const totalPixels = this.originalImageData.width * this.originalImageData.height;
             const bitsNeeded = this.audioBits.length;
-            const pixelsNeeded = Math.ceil(bitsNeeded / 3); // 3 bits per pixel (RGB)
+            const pixelsNeeded = Math.ceil(bitsNeeded / 3) * 2; // Double the required pixels for safety
             
             if (pixelsNeeded > totalPixels) {
-                this.log('step1Logs', `Error: Need ${pixelsNeeded} pixels but only have ${totalPixels}. Please reload the image.`, 'error');
-                document.getElementById('hideAudioBtn').disabled = true;
+                this.log('step1Logs', `Need ${pixelsNeeded} pixels but only have ${totalPixels}. Auto-scaling image...`, 'warning');
+                this.autoScaleImage(pixelsNeeded);
             } else {
                 this.log('step1Logs', `Ready to hide audio: ${pixelsNeeded}/${totalPixels} pixels needed (${(pixelsNeeded/totalPixels*100).toFixed(1)}%)`, 'success');
             }
         }
+    }
+    
+    autoScaleImage(requiredPixels) {
+        const canvas = document.getElementById('originalCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate scale factor with extra buffer
+        const currentPixels = this.originalImageData.width * this.originalImageData.height;
+        const scaleFactor = Math.sqrt(requiredPixels / currentPixels) * 1.5; // 50% extra buffer
+        
+        const newWidth = Math.floor(this.originalImageData.width * scaleFactor);
+        const newHeight = Math.floor(this.originalImageData.height * scaleFactor);
+        const newTotalPixels = newWidth * newHeight;
+        
+        this.log('step1Logs', `Scaling image from ${this.originalImageData.width}x${this.originalImageData.height} to ${newWidth}x${newHeight}`, 'info');
+        this.log('step1Logs', `Pixel capacity increased from ${currentPixels} to ${newTotalPixels} (+${((newTotalPixels - currentPixels) / currentPixels * 100).toFixed(1)}%)`, 'info');
+        
+        // Create temporary canvas with original image
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = this.originalImageData.width;
+        tempCanvas.height = this.originalImageData.height;
+        tempCtx.putImageData(this.originalImageData, 0, 0);
+        
+        // Resize main canvas and redraw scaled image
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        
+        // Apply display scaling if needed
+        const maxDisplayWidth = 800;
+        const maxDisplayHeight = 600;
+        let displayScale = Math.min(maxDisplayWidth / newWidth, maxDisplayHeight / newHeight, 1);
+        canvas.style.width = Math.floor(newWidth * displayScale) + 'px';
+        canvas.style.height = Math.floor(newHeight * displayScale) + 'px';
+        
+        // Draw scaled image
+        ctx.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+        
+        // Update image data
+        this.originalImageData = ctx.getImageData(0, 0, newWidth, newHeight);
+        
+        this.log('step1Logs', `Image auto-scaled successfully: ${newTotalPixels} pixels now available vs ${requiredPixels} required`, 'success');
+        this.log('step1Logs', `Ready to hide audio with ${((newTotalPixels - requiredPixels) / requiredPixels * 100).toFixed(1)}% extra capacity`, 'success');
     }
     
     async hideAudioInImage() {
