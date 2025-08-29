@@ -249,7 +249,7 @@ class AudioSteganography {
             this.originalImageData.height
         );
         
-        // Hide audio bits in least common pixels - but use sequential pixel order for consistency
+        // Hide audio bits in least common pixels using frequency order for better visibility
         this.usedPixels.clear();
         this.pixelOrder = []; // Track exact order of pixels used
         
@@ -257,42 +257,49 @@ class AudioSteganography {
         let pixelsUsed = 0;
         let pixelsModified = 0;
         
-        // Use pixels in sequential order instead of frequency order for better extraction
-        for (let pixelIndex = 0; pixelIndex < this.stegoImageData.width * this.stegoImageData.height && bitIndex < this.audioBits.length; pixelIndex++) {
-            const dataIndex = pixelIndex * 4;
+        // Use least common pixels first (more visible changes)
+        for (let colorData of sortedPixels) {
+            if (bitIndex >= this.audioBits.length) break;
             
-            // Store original values to check for actual changes
-            const originalR = this.stegoImageData.data[dataIndex];
-            const originalG = this.stegoImageData.data[dataIndex + 1];
-            const originalB = this.stegoImageData.data[dataIndex + 2];
-            
-            // Hide 3 bits per pixel in RGB channels (LSB) - skip alpha channel
-            if (bitIndex < this.audioBits.length) {
-                this.stegoImageData.data[dataIndex] = (this.stegoImageData.data[dataIndex] & 0xFE) | parseInt(this.audioBits[bitIndex]);
-                bitIndex++;
-            }
-            if (bitIndex < this.audioBits.length) {
-                this.stegoImageData.data[dataIndex + 1] = (this.stegoImageData.data[dataIndex + 1] & 0xFE) | parseInt(this.audioBits[bitIndex]);
-                bitIndex++;
-            }
-            if (bitIndex < this.audioBits.length) {
-                this.stegoImageData.data[dataIndex + 2] = (this.stegoImageData.data[dataIndex + 2] & 0xFE) | parseInt(this.audioBits[bitIndex]);
-                bitIndex++;
-            }
-            
-            // Check if pixel was actually modified
-            if (originalR !== this.stegoImageData.data[dataIndex] || 
-                originalG !== this.stegoImageData.data[dataIndex + 1] || 
-                originalB !== this.stegoImageData.data[dataIndex + 2]) {
-                pixelsModified++;
-            }
-            
-            this.usedPixels.add(pixelIndex);
-            this.pixelOrder.push(pixelIndex);
-            pixelsUsed++;
-            
-            if (pixelIndex < 5) {
-                console.log(`DEBUG: First few pixels - Index ${pixelIndex}: RGBA(${this.stegoImageData.data[dataIndex]}, ${this.stegoImageData.data[dataIndex + 1]}, ${this.stegoImageData.data[dataIndex + 2]}, ${this.stegoImageData.data[dataIndex + 3]})`);
+            for (let pixelIndex of colorData.indices) {
+                if (bitIndex >= this.audioBits.length) break;
+                
+                const dataIndex = pixelIndex * 4;
+                
+                // Store original values to check for actual changes
+                const originalR = this.stegoImageData.data[dataIndex];
+                const originalG = this.stegoImageData.data[dataIndex + 1];
+                const originalB = this.stegoImageData.data[dataIndex + 2];
+                
+                // Hide 3 bits per pixel in RGB channels - modify more significantly for visibility
+                if (bitIndex < this.audioBits.length) {
+                    // Modify multiple bits for visibility (not just LSB)
+                    this.stegoImageData.data[dataIndex] = (this.stegoImageData.data[dataIndex] & 0xFC) | (parseInt(this.audioBits[bitIndex]) ? 3 : 0);
+                    bitIndex++;
+                }
+                if (bitIndex < this.audioBits.length) {
+                    this.stegoImageData.data[dataIndex + 1] = (this.stegoImageData.data[dataIndex + 1] & 0xFC) | (parseInt(this.audioBits[bitIndex]) ? 3 : 0);
+                    bitIndex++;
+                }
+                if (bitIndex < this.audioBits.length) {
+                    this.stegoImageData.data[dataIndex + 2] = (this.stegoImageData.data[dataIndex + 2] & 0xFC) | (parseInt(this.audioBits[bitIndex]) ? 3 : 0);
+                    bitIndex++;
+                }
+                
+                // Check if pixel was actually modified
+                if (originalR !== this.stegoImageData.data[dataIndex] || 
+                    originalG !== this.stegoImageData.data[dataIndex + 1] || 
+                    originalB !== this.stegoImageData.data[dataIndex + 2]) {
+                    pixelsModified++;
+                }
+                
+                this.usedPixels.add(pixelIndex);
+                this.pixelOrder.push(pixelIndex);
+                pixelsUsed++;
+                
+                if (pixelIndex < 5) {
+                    console.log(`DEBUG: First few pixels - Index ${pixelIndex}: RGB(${this.stegoImageData.data[dataIndex]}, ${this.stegoImageData.data[dataIndex + 1]}, ${this.stegoImageData.data[dataIndex + 2]})`);
+                }
             }
         }
         
@@ -399,30 +406,20 @@ class AudioSteganography {
         
         const ctx = usageCanvas.getContext('2d');
         
-        // Create usage map image data
-        const usageData = new ImageData(this.stegoImageData.width, this.stegoImageData.height);
+        // Start with the original image as background
+        ctx.putImageData(this.originalImageData, 0, 0);
         
-        for (let i = 0; i < usageData.data.length; i += 4) {
-            const pixelIndex = i / 4;
-            
-            if (this.usedPixels.has(pixelIndex)) {
-                // Red for used pixels
-                usageData.data[i] = 255;     // R
-                usageData.data[i + 1] = 0;   // G
-                usageData.data[i + 2] = 0;   // B
-                usageData.data[i + 3] = 128; // A (semi-transparent)
-            } else {
-                // Transparent for unused pixels
-                usageData.data[i] = 0;       // R
-                usageData.data[i + 1] = 0;   // G
-                usageData.data[i + 2] = 0;   // B
-                usageData.data[i + 3] = 0;   // A
-            }
+        // Overlay red highlights on pixels that contain audio data
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        
+        // Highlight each used pixel
+        for (let pixelIndex of this.usedPixels) {
+            const x = pixelIndex % this.stegoImageData.width;
+            const y = Math.floor(pixelIndex / this.stegoImageData.width);
+            ctx.fillRect(x, y, 1, 1);
         }
         
-        ctx.putImageData(usageData, 0, 0);
-        
-        this.log('step2Logs', `Created pixel usage map showing ${this.usedPixels.size} used pixels in red`, 'info');
+        this.log('step2Logs', `Created pixel usage map showing ${this.usedPixels.size} least common pixels used for audio storage`, 'info');
         this.log('step2Logs', `Usage map canvas: ${usageCanvas.width}x${usageCanvas.height}`, 'info');
     }
     
@@ -508,22 +505,33 @@ Please enhance only the non-audio pixels to create an artistic version while pre
             this.enhancedImageData = this.stegoImageData;
         }
         
-        // Extract bits using the same sequential order as hiding
+        // Extract bits using the same pixel order as hiding (least common first)
         let extractedBits = '';
-        const totalPixels = this.enhancedImageData.width * this.enhancedImageData.height;
         const bitsNeeded = this.audioBits.length;
+        let bitIndex = 0;
         
-        for (let pixelIndex = 0; pixelIndex < totalPixels && extractedBits.length < bitsNeeded; pixelIndex++) {
+        // Use the same pixel order as when hiding
+        for (let pixelIndex of this.pixelOrder) {
+            if (bitIndex >= bitsNeeded) break;
+            
             const dataIndex = pixelIndex * 4;
             
-            // Extract 3 bits per pixel from RGB channels (LSB) - skip alpha
-            const rBit = (this.enhancedImageData.data[dataIndex] & 1).toString();
-            const gBit = (this.enhancedImageData.data[dataIndex + 1] & 1).toString();
-            const bBit = (this.enhancedImageData.data[dataIndex + 2] & 1).toString();
-            
-            extractedBits += rBit;
-            if (extractedBits.length < bitsNeeded) extractedBits += gBit;
-            if (extractedBits.length < bitsNeeded) extractedBits += bBit;
+            // Extract 3 bits per pixel from RGB channels - matching the hiding algorithm
+            if (bitIndex < bitsNeeded) {
+                const rBits = this.enhancedImageData.data[dataIndex] & 3;
+                extractedBits += rBits > 0 ? '1' : '0';
+                bitIndex++;
+            }
+            if (bitIndex < bitsNeeded) {
+                const gBits = this.enhancedImageData.data[dataIndex + 1] & 3;
+                extractedBits += gBits > 0 ? '1' : '0';
+                bitIndex++;
+            }
+            if (bitIndex < bitsNeeded) {
+                const bBits = this.enhancedImageData.data[dataIndex + 2] & 3;
+                extractedBits += bBits > 0 ? '1' : '0';
+                bitIndex++;
+            }
         }
         
         // Trim to exact original length
