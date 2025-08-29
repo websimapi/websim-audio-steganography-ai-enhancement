@@ -58,12 +58,34 @@ class AudioSteganography {
                 const canvas = document.getElementById('originalCanvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Resize canvas to fit image while maintaining aspect ratio
+                // Calculate required pixels if audio is already loaded
+                let requiredPixels = 0;
+                if (this.audioBits) {
+                    requiredPixels = Math.ceil(this.audioBits.length / 3) * 2; // Double the required pixels for safety
+                    this.log('step1Logs', `Audio requires ${requiredPixels} pixels for safe storage`, 'info');
+                }
+                
+                // Calculate initial scale for display
                 const maxWidth = 400;
                 const maxHeight = 300;
-                const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
-                canvas.width = img.width * scale;
-                canvas.height = img.height * scale;
+                let scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+                
+                let finalWidth = Math.floor(img.width * scale);
+                let finalHeight = Math.floor(img.height * scale);
+                let totalPixels = finalWidth * finalHeight;
+                
+                // If we need more pixels, scale up the image
+                if (requiredPixels > 0 && totalPixels < requiredPixels) {
+                    const scaleFactor = Math.sqrt(requiredPixels / totalPixels);
+                    finalWidth = Math.floor(img.width * scale * scaleFactor);
+                    finalHeight = Math.floor(img.height * scale * scaleFactor);
+                    totalPixels = finalWidth * finalHeight;
+                    
+                    this.log('step1Logs', `Scaling image up by ${scaleFactor.toFixed(2)}x to accommodate audio data`, 'info');
+                }
+                
+                canvas.width = finalWidth;
+                canvas.height = finalHeight;
                 
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 this.originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -151,7 +173,7 @@ class AudioSteganography {
             const pixelsNeeded = Math.ceil(bitsNeeded / 3); // 3 bits per pixel (RGB)
             
             if (pixelsNeeded > totalPixels) {
-                this.log('step1Logs', `Error: Need ${pixelsNeeded} pixels but only have ${totalPixels}`, 'error');
+                this.log('step1Logs', `Error: Need ${pixelsNeeded} pixels but only have ${totalPixels}. Please reload the image.`, 'error');
                 document.getElementById('hideAudioBtn').disabled = true;
             } else {
                 this.log('step1Logs', `Ready to hide audio: ${pixelsNeeded}/${totalPixels} pixels needed (${(pixelsNeeded/totalPixels*100).toFixed(1)}%)`, 'success');
@@ -528,4 +550,3 @@ Please enhance only the non-audio pixels to create an artistic version while pre
 
 // Initialize the application
 const audioStego = new AudioSteganography();
-
