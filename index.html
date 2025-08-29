@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Steganography & AI Enhancement</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Cal Sans', sans-serif;
+            background: white;
+            color: black;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .step h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step-number {
+            background: #4a5568;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        input[type="file"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #2d3748;
+        }
+        
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        
+        .canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .canvas-wrapper {
+            text-align: center;
+        }
+        
+        .canvas-wrapper h3 {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        canvas {
+            border: 2px solid #e2e8f0;
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .log-container {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-info { color: #63b3ed; }
+        .log-success { color: #68d391; }
+        .log-warning { color: #fbb454; }
+        .log-error { color: #fc8181; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Audio Steganography & AI Enhancement</h1>
+        
+        <div class="step">
+            <h2><span class="step-number">1</span>Load Image & Audio</h2>
+            <div class="controls">
+                <input type="file" id="imageInput" accept="image/*" />
+                <input type="file" id="audioInput" accept="audio/*" />
+            </div>
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <h3>Original Image</h3>
+                    <canvas id="originalCanvas" width="400" height="300"></canvas>
+                </div>
+            </div>
+            <div class="log-container" id="step1Logs"></div>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">2</span>Analyze & Hide Audio Data</h2>
+            <div class="controls">
+                <button id="hideAudioBtn" disabled>Hide Audio in Image</button>
+            </div>
+            <div class="stats" id="hideStats"></div>
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <h3>Steganographic Image</h3>
+                    <canvas id="stegoCanvas" width="400" height="300"></canvas>
+                </div>
+                <div class="canvas-wrapper">
+                    <h3>Pixel Usage Map</h3>
+                    <canvas id="usageMapCanvas" width="400" height="300"></canvas>
+                </div>
+            </div>
+            <div class="log-container" id="step2Logs"></div>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">3</span>AI Enhancement</h2>
+            <div class="controls">
+                <button id="enhanceBtn" disabled>Enhance with AI</button>
+                <input type="text" id="enhancePrompt" placeholder="Enhancement prompt (e.g., 'make it look like a watercolor painting')" style="flex: 1; min-width: 300px;" />
+            </div>
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <h3>AI Enhanced Image</h3>
+                    <canvas id="enhancedCanvas" width="400" height="300"></canvas>
+                </div>
+            </div>
+            <div class="log-container" id="step3Logs"></div>
+        </div>
+
+        <div class="step">
+            <h2><span class="step-number">4</span>Verify & Extract Audio</h2>
+            <div class="controls">
+                <button id="extractBtn" disabled>Extract & Verify Audio</button>
+                <button id="playOriginalBtn" disabled>Play Original</button>
+                <button id="playExtractedBtn" disabled>Play Extracted</button>
+            </div>
+            <div class="stats" id="verifyStats"></div>
+            <div class="log-container" id="step4Logs"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
