@@ -322,8 +322,8 @@ class AudioSteganography {
         this.log('step2Logs', `Steganographic image rendered: ${stegoCanvas.width}x${stegoCanvas.height}`, 'success');
         
         // Verify changes by comparing a few pixels
-        const originalCanvas = document.getElementById('originalCanvas');
-        const originalCtx = originalCanvas.getContext('2d');
+        const origCanvas = document.getElementById('originalCanvas');
+        const originalCtx = origCanvas.getContext('2d');
         const originalCheck = originalCtx.getImageData(0, 0, 10, 1);
         const stegoCheck = stegoCtx.getImageData(0, 0, 10, 1);
         
