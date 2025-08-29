@@ -283,12 +283,20 @@ class AudioSteganography {
             }
         }
         
-        // Display steganographic image
+        // Display steganographic image with proper scaling
         const stegoCanvas = document.getElementById('stegoCanvas');
         stegoCanvas.width = this.stegoImageData.width;
         stegoCanvas.height = this.stegoImageData.height;
+        
+        // Apply display scaling matching the original canvas
+        const originalCanvas = document.getElementById('originalCanvas');
+        stegoCanvas.style.width = originalCanvas.style.width;
+        stegoCanvas.style.height = originalCanvas.style.height;
+        
         const stegoCtx = stegoCanvas.getContext('2d');
         stegoCtx.putImageData(this.stegoImageData, 0, 0);
+        
+        this.log('step2Logs', `Steganographic image displayed on canvas: ${stegoCanvas.width}x${stegoCanvas.height}`, 'info');
         
         // Create and display pixel usage map
         this.createPixelUsageMap();
@@ -344,6 +352,12 @@ class AudioSteganography {
         const usageCanvas = document.getElementById('usageMapCanvas');
         usageCanvas.width = this.stegoImageData.width;
         usageCanvas.height = this.stegoImageData.height;
+        
+        // Apply same display scaling as other canvases
+        const originalCanvas = document.getElementById('originalCanvas');
+        usageCanvas.style.width = originalCanvas.style.width;
+        usageCanvas.style.height = originalCanvas.style.height;
+        
         const ctx = usageCanvas.getContext('2d');
         
         // Create usage map image data
@@ -370,6 +384,7 @@ class AudioSteganography {
         ctx.putImageData(usageData, 0, 0);
         
         this.log('step2Logs', `Created pixel usage map showing ${this.usedPixels.size} used pixels in red`, 'info');
+        this.log('step2Logs', `Usage map canvas: ${usageCanvas.width}x${usageCanvas.height}`, 'info');
     }
     
     async enhanceWithAI() {
